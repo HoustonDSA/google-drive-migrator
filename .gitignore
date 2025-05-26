@@ -1,4 +1,8 @@
 credentials/*
+!credentials/.keep
+logs/*
+!logs/.keep
 venv/*
 *.pickle
 .DS_Store
+.gitignore

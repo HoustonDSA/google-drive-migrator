@@ -3,11 +3,25 @@ import os
 import pickle
 import sys
 import time
+import logging
 
 from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from googleapiclient.errors import HttpError
+
+# Configure logging to both file and stdout
+log_format = '[%(asctime)s] %(levelname)s: %(message)s'
+log_file = './log/copy_drive_log.txt'
+
+logging.basicConfig(
+    level=logging.INFO,
+    format=log_format,
+    handlers=[
+        logging.FileHandler(log_file, mode='w', encoding='utf-8'),
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 FOLDER_MIME = 'application/vnd.google-apps.folder'
 SCOPES = ['https://www.googleapis.com/auth/drive']
@@ -104,9 +118,9 @@ def copy_permissions(service, src_id, dst_id):
                 sendNotificationEmail=False,
                 supportsAllDrives=True
             ).execute()
-            print(f"    🔐 Copied permission for {perm.get('emailAddress', perm.get('domain'))}")
+            logging.info(f"    🔐 Copied permission for {perm.get('emailAddress', perm.get('domain'))}")
         except HttpError as e:
-            print(f"    ⚠️ Failed to copy permission: {e}")
+            logging.info(f"    ⚠️ Failed to copy permission: {e}")
 
 
 def recursive_copy(service, src_folder_id, dst_folder_id, indent=0):
@@ -118,21 +132,21 @@ def recursive_copy(service, src_folder_id, dst_folder_id, indent=0):
         prefix = ' ' * indent
 
         if mime == FOLDER_MIME:
-            print(f"{prefix}📁 Folder: {name}")
+            logging.info(f"{prefix}📁 Folder: {name}")
             try:
                 new_folder_id = create_folder(service, name, dst_folder_id)
                 copy_permissions(service, item['id'], new_folder_id)
                 recursive_copy(service, item['id'], new_folder_id, indent + 2)
             except HttpError as e:
-                print(f"{prefix}✗ Error copying folder '{name}': {e}")
+                logging.info(f"{prefix}✗ Error copying folder '{name}': {e}")
         else:
-            print(f"{prefix}📄 File: {name}")
+            logging.info(f"{prefix}📄 File: {name}")
             try:
                 new_file_id = copy_file(service, item['id'], name, dst_folder_id)
                 copy_permissions(service, item['id'], new_file_id)
                 time.sleep(0.1)
             except HttpError as e:
-                print(f"{prefix}✗ Error copying file '{name}': {e}")
+                logging.info(f"{prefix}✗ Error copying file '{name}': {e}")
 
 
 def main():
@@ -144,11 +158,11 @@ def main():
 
     try:
         service = authenticate_oauth(args.client_secrets)
-        print(f"\n🔄 Starting copy:\n  From: {args.src}\n  To:   {args.dst}\n")
+        logging.info(f"\n🔄 Starting copy:\n  From: {args.src}\n  To:   {args.dst}\n")
         recursive_copy(service, args.src, args.dst)
-        print("\n✅ Done copying folder with permissions!")
+        logging.info("\n✅ Done copying folder with permissions!")
     except Exception as e:
-        print(f"\n✗ Fatal error: {e}\n")
+        logging.info(f"\n✗ Fatal error: {e}\n")
         sys.exit(1)
 
 
