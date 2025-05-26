@@ -1,0 +1,4 @@
+credentials/*
+venv/*
+*.pickle
+.DS_Store
